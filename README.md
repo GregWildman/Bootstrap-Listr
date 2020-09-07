@@ -66,8 +66,8 @@ Please visit the [project wiki](https://github.com/idleberg/Bootstrap-Listr/wiki
 
 ## Apache XSendFile support
 
-Using [mod_xsendfile](https://tn123.org/mod_xsendfile/) reduces PHP memory usage by using Apache internals including all optimizations like caching-headers and sendfile or mmap if configured. An environemnt variable is used to enable/disable this feature. This is needed for PHP-FPM which runs as a separate process.
-Example Apache config.
+Using [XSendfile](https://tn123.org/mod_xsendfile/) reduces PHP memory usage by using Apache internals including all optimizations like caching-headers and sendfile or mmap if configured. An environemnt variable is used to enable/disable this feature. This is needed for PHP-FPM which runs as a separate process.
+Example Apache config
 
 ```apache
 <Directory "/srv/hosting/listr/docroot">
@@ -80,10 +80,6 @@ Example Apache config.
   XSendFilePath /srv/hosting/listr
 </Directory>
 ```
-
-## NGINX XSendfile support
-
-NGINX also has this feature although implemented differently. It is called `X-Accel-Redirect`. More information [here](https://www.nginx.com/resources/wiki/start/topics/examples/xsendfile/).
 
 ## Support
 
