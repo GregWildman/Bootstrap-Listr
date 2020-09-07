@@ -64,6 +64,23 @@ You can configure a number of settings in the file `config.json`:
 
 Please visit the [project wiki](https://github.com/idleberg/Bootstrap-Listr/wiki/Understanding-config.json) for details.
 
+## Apache XSendFile support
+
+Using [XSendfile](https://tn123.org/mod_xsendfile/) reduces PHP memory usage by using Apache internals including all optimizations like caching-headers and sendfile or mmap if configured. An environemnt variable is used to enable/disable this feature. This is needed for PHP-FPM which runs as a separate process.
+Example Apache config
+
+```apache
+<Directory "/srv/hosting/listr/docroot">
+  Options FollowSymlinks
+  AllowOverride All
+  Require all granted
+
+  SetEnv MOD_X_SENDFILE_ENABLED 1
+  XSendFile On
+  XSendFilePath /srv/hosting/listr
+</Directory>
+```
+
 ## Support
 
 It's always a good start to consult the [FAQ](https://github.com/idleberg/Bootstrap-Listr/wiki/FAQ) or the [project wiki](https://github.com/idleberg/Bootstrap-Listr/wiki) in general.

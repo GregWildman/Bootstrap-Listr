@@ -52,9 +52,20 @@ $dir_name       = explode("/", $this_folder);
 if(substr($navigation_dir, -1) != "/"){
     if(file_exists($navigation_dir)){
 
-        // GET MIME 
+        // GET MIME
         $mime_file = finfo_file(finfo_open(FILEINFO_MIME_TYPE), $navigation_dir);
-        
+
+        // Set the XSendFile header for apache to serve the file directly.
+        // Make sure your apache config has XSendFilePath set correctly.
+        if (getenv('MOD_X_SENDFILE_ENABLED')) {
+            // Get real file path for xsendfile. Enable logging to confirm
+            // the file being served is covered by XSendFilePath
+            $real_file_path = realpath($navigation_dir);
+            // error_log("X-Sendfile: [$real_file_path][$mime_file]", 0);
+
+            header("X-Sendfile: $real_file_path");
+        }
+
         // Direct download
         if($mime_file == "inode/x-empty" || $mime_file == ""){
             header('Content-Description: File Transfer');
@@ -72,10 +83,13 @@ if(substr($navigation_dir, -1) != "/"){
         header('Content-Length: ' . filesize($navigation_dir));
         ob_clean();
         flush();
-        if ($options['general']['read_chunks'] == true) { 
-            readfile_chunked($navigation_dir);
-        } else {
-            readfile($navigation_dir);     
+
+        if (! getenv('MOD_X_SENDFILE_ENABLED')) {
+            if ($options['general']['read_chunks'] == true) {
+                readfile_chunked($navigation_dir);
+            } else {
+                readfile($navigation_dir);
+            }
         }
     } else {
         set_404_error($root_dir, basename($navigation_dir));
@@ -121,7 +135,7 @@ switch ($options['bootstrap']['icons']) {
         $icons['prefix'] = "fa fa-fw";
         $icons['home']   = "<i class=\"".$icons['prefix']." ".$icons['home']." fa-lg\"></i> ";
         $icons['folder'] = $icons['prefix'].' '. $icons['folder'].' ' . $options['bootstrap']['fontawesome_style'];
-        if ($options['general']['share_icons'] == true) { 
+        if ($options['general']['share_icons'] == true) {
             $icons_dropbox  = "<i class=\"".$icons['prefix']." fa-dropbox\" aria-hidden=\"true\"></i> ";
             $icons_email    = "<i class=\"".$icons['prefix']." fa-envelope\" aria-hidden=\"true\"></i> ";
             $icons_facebook = "<i class=\"".$icons['prefix']." fa-facebook\" aria-hidden=\"true\"></i> ";
@@ -279,16 +293,16 @@ if ($handle = opendir($navigation_dir))
                 if (in_array($item['lext'], $options["checksum_files"])) {
                     continue;
                 }
-                
+
                 // Look for checksum files
                 foreach ($options["checksum_files"] as $chksum_ext) {
                     // $item itself is copied over and over for each file so delete those additional attributes to prevent unwanted carry-over
                     if (array_key_exists($chksum_ext, $item)) {
                         unset($item[$chksum_ext]);
                     }
-            
+
                     $checksum_file = $navigation_dir . $file . '.' . $chksum_ext;
-                    // Found 
+                    // Found
                     if (file_exists($checksum_file)) {
                         // Read in
                         $checksum_content = file_get_contents($checksum_file, FILE_USE_INCLUDE_PATH);
@@ -304,7 +318,7 @@ if ($handle = opendir($navigation_dir))
 
             // Assign file icons
             $item['class'] = $icons['prefix'].' '.$icons['default'].' '. $options['bootstrap']['fontawesome_style'];
-            
+
             foreach ($filetype as $v) {
                 if (in_array($item['lext'], $v['extensions'])) {
                     $item['class'] = $icons['prefix'].' '.$v['icon'].' '. $options['bootstrap']['fontawesome_style'];
@@ -323,7 +337,7 @@ if ($handle = opendir($navigation_dir))
                 $item['mtime']      =   $stat['mtime'];
                 $item['iso_mtime']  =   date("Y-m-d H:i:s", $item['mtime']);
             }
-            
+
             // Add files to the file list...
             if(is_dir($navigation_dir.$file)){
                 array_push($folder_list, $item);
@@ -488,7 +502,7 @@ if ($table_options['count']) {
 
 if(($folder_list) || ($file_list) ) {
 
-    if($folder_list):    
+    if($folder_list):
         foreach($folder_list as $item) :
 
             // Is folder hidden?
@@ -520,7 +534,7 @@ if(($folder_list) || ($file_list) ) {
             }
 
             $table_body .= "<a href=\"" . htmlentities(rawurlencode($item['bname']), ENT_QUOTES, 'utf-8') . "/\" $tr_links><strong>" . utf8ify($item['bname']) . "</strong></a></td>" . PHP_EOL;
-            
+
             if ($table_options['size']) {
                 $table_body .= "            <td";
                 if ($options['general']['enable_sort']) {
@@ -594,20 +608,20 @@ if(($folder_list) || ($file_list) ) {
                         } else {
                             $album = null;
                         }
-                        $virtual_attr .= ' data-url="https://www.flickr.com/'.htmlentities($virtual_file['user']).'/'.htmlentities($virtual_file['id']).$album.'"';  
-                        $virtual_attr .= ' data-name="'.htmlentities($virtual_file['name']).'"';  
+                        $virtual_attr .= ' data-url="https://www.flickr.com/'.htmlentities($virtual_file['user']).'/'.htmlentities($virtual_file['id']).$album.'"';
+                        $virtual_attr .= ' data-name="'.htmlentities($virtual_file['name']).'"';
                     } else if ($item['lext'] == 'soundcloud') {
                         $virtual_attr =  ' data-id="'.htmlentities($virtual_file['type']).'/'.htmlentities($virtual_file['id']).'"';
-                        $virtual_attr .= ' data-url="'.htmlentities($virtual_file['url']).'"';  
-                        $virtual_attr .= ' data-name="'.htmlentities($virtual_file['name']).'"';  
+                        $virtual_attr .= ' data-url="'.htmlentities($virtual_file['url']).'"';
+                        $virtual_attr .= ' data-name="'.htmlentities($virtual_file['name']).'"';
                     } else if ($item['lext'] == 'vimeo') {
                         $virtual_attr =  ' data-id="'.htmlentities($virtual_file['id']).'"';
-                        $virtual_attr .= ' data-url="https://vimeo.com/'.htmlentities($virtual_file['id']).'"';  
-                        $virtual_attr .= ' data-name="'.htmlentities($virtual_file['name']).'"';  
+                        $virtual_attr .= ' data-url="https://vimeo.com/'.htmlentities($virtual_file['id']).'"';
+                        $virtual_attr .= ' data-name="'.htmlentities($virtual_file['name']).'"';
                     } else if ($item['lext'] == 'youtube') {
                         $virtual_attr =  ' data-id="'.htmlentities($virtual_file['id']).'"';
-                        $virtual_attr .= ' data-url="https://youtube.com/watch?v='.htmlentities($virtual_file['id']).'"';  
-                        $virtual_attr .= ' data-name="'.htmlentities($virtual_file['name']).'"';  
+                        $virtual_attr .= ' data-url="https://youtube.com/watch?v='.htmlentities($virtual_file['id']).'"';
+                        $virtual_attr .= ' data-name="'.htmlentities($virtual_file['name']).'"';
                     }
                 } else {
                     $virtual_attr = null;
@@ -628,11 +642,11 @@ if(($folder_list) || ($file_list) ) {
             }
 
             $table_body .= "          <tr$row_attr>" . PHP_EOL;
-            
+
             if ($table_options['count']) {
                 // $table_body .= "            <td class=\"text-muted text-xs-$right\" data-sort-value=\"$row_counter\">$visible_count</td>";
             }
-            
+
             $table_body .= "            <td";
             if ($options['general']['enable_sort']) {
                 $table_body .= " class=\"" . implode(" ", $name_classes) . "\" data-sort-value=\"file-". htmlentities($item['lbname'], ENT_QUOTES, 'utf-8') . "\"" ;
@@ -714,7 +728,7 @@ if(($folder_list) || ($file_list) ) {
                     }
                 }
             }
-            
+
             $table_body .= "</td>" . PHP_EOL;
 
             // Size
@@ -750,7 +764,7 @@ if(($folder_list) || ($file_list) ) {
         $table_body .= "            <td colspan=\"$colspan\" style=\"font-style:italic\">";
         if ($options['bootstrap']['icons']  !== null ) {
             $table_body .= "<".$icons['tag']." class=\"" . $item['class'] . "\" aria-hidden=\"true\">&nbsp;</".$icons['tag'].">";
-        } 
+        }
         $table_body .= _("empty folder")."</td>" . PHP_EOL;
         $table_body .= "          </tr>" . PHP_EOL;
 }
